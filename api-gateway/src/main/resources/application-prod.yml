@@ -1,0 +1,88 @@
+server:
+  port: 4004
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL}
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowed-origins: ${FRONTEND_ORIGIN}
+            allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+            allowed-headers: Authorization,Content-Type
+            allow-credentials: true
+            max-age: 3600
+      routes:
+        - id: care-public-catalog-route
+          uri: ${CARE_SERVICE_URL}
+          predicates:
+            - Path=/api/care/doctors/**,/api/care/lab-tests/**
+            - Method=GET
+          filters:
+            - StripPrefix=1
+        - id: care-service-route
+          uri: ${CARE_SERVICE_URL}
+          predicates:
+            - Path=/api/care/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+        - id: billing-service-route
+          uri: ${BILLING_SERVICE_URL}
+          predicates:
+            - Path=/api/billing/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+        - id: patient-service-route
+          uri: ${PATIENT_SERVICE_URL}
+          predicates:
+            - Path=/api/patients/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+        - id: pharmacy-public-catalog-route
+          uri: ${PHARMACY_SERVICE_URL}
+          predicates:
+            - Path=/api/pharmacy/medications
+            - Method=GET
+          filters:
+            - StripPrefix=1
+        - id: pharmacy-service-route
+          uri: ${PHARMACY_SERVICE_URL}
+          predicates:
+            - Path=/api/pharmacy/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+        - id: ai-service-route
+          uri: ${AI_SERVICE_URL}
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+        - id: auth-admin-staff-route
+          uri: ${AUTH_SERVICE_URL}
+          predicates:
+            - Path=/api/admin/staff,/api/admin/staff/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+        - id: auth-service-route
+          uri: ${AUTH_SERVICE_URL}
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+
+# API documentation routes are intentionally omitted from the production profile.

@@ -1,0 +1,170 @@
+name: medicare-local
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: hospital_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Create a .env file from .env.example}
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hospital_app -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:3.9.0
+    environment:
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:-4L6g3nShT-eMCtK--X86sw}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  auth-service:
+    build: ./auth-service
+    environment:
+      SERVER_PORT: 4005
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth-service-db
+      SPRING_DATASOURCE_USERNAME: hospital_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_SQL_INIT_MODE: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  patient-service:
+    build: ./patient-service
+    environment:
+      SERVER_PORT: 4000
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/patient-service-db
+      SPRING_DATASOURCE_USERNAME: hospital_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_SQL_INIT_MODE: always
+      SPRING_DATASOURCE_HIKARI_INITIALIZATION_FAIL_TIMEOUT: 60000
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      BILLING_SERVICE_ADDRESS: billing-service
+      BILLING_SERVICE_GRPC_PORT: 9001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      billing-service:
+        condition: service_started
+
+  billing-service:
+    build: ./billing-service
+    environment:
+      SERVER_PORT: 4001
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/billing-service-db
+      SPRING_DATASOURCE_USERNAME: hospital_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      BILLING_INTERNAL_SERVICE_TOKEN: ${BILLING_INTERNAL_SERVICE_TOKEN:?Set BILLING_INTERNAL_SERVICE_TOKEN in .env}
+      BILLING_PAYMENT_PROVIDER: none
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  care-service:
+    build: ./care-service
+    environment:
+      SERVER_PORT: 4008
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/care-service-db
+      SPRING_DATASOURCE_USERNAME: hospital_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      BILLING_SERVICE_URL: http://billing-service:4001
+      BILLING_INTERNAL_SERVICE_TOKEN: ${BILLING_INTERNAL_SERVICE_TOKEN:?Set BILLING_INTERNAL_SERVICE_TOKEN in .env}
+      DEMO_DOCTORS_ENABLED: ${DEMO_DOCTORS_ENABLED:-true}
+      DEMO_LAB_TESTS_ENABLED: ${DEMO_LAB_TESTS_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      billing-service:
+        condition: service_started
+
+  pharmacy-service:
+    build: ./pharmacy-service
+    environment:
+      SERVER_PORT: 4006
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/pharmacy-service-db
+      SPRING_DATASOURCE_USERNAME: hospital_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      BILLING_SERVICE_URL: http://billing-service:4001
+      BILLING_INTERNAL_SERVICE_TOKEN: ${BILLING_INTERNAL_SERVICE_TOKEN:?Set BILLING_INTERNAL_SERVICE_TOKEN in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      billing-service:
+        condition: service_started
+
+  ai-service:
+    build: ./ai-service
+    environment:
+      SERVER_PORT: 4007
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/ai-service-db
+      SPRING_DATASOURCE_USERNAME: hospital_app
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      AI_DEMO_MONITORING_ENABLED: ${AI_DEMO_MONITORING_ENABLED:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  api-gateway:
+    build: ./api-gateway
+    environment:
+      SERVER_PORT: 4004
+      AUTH_SERVICE_URL: http://auth-service:4005
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+    ports:
+      - "127.0.0.1:4004:4004"
+    depends_on:
+      - auth-service
+      - patient-service
+      - billing-service
+      - care-service
+      - pharmacy-service
+      - ai-service
+
+volumes:
+  postgres_data:

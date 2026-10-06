@@ -1,0 +1,81 @@
+name: medicare-public-demo
+
+services:
+  auth-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_SQL_INIT_MODE: never
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:-}
+
+  patient-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_SQL_INIT_MODE: never
+
+  billing-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+  care-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      DEMO_DOCTORS_ENABLED: "true"
+      DEMO_LAB_TESTS_ENABLED: "true"
+
+  pharmacy-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+  ai-service:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      APP_DEMO_MONITORING_ENABLED: ${AI_DEMO_MONITORING_ENABLED:-false}
+
+  api-gateway:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      AUTH_SERVICE_URL: http://auth-service:4005
+      CARE_SERVICE_URL: http://care-service:4008
+      BILLING_SERVICE_URL: http://billing-service:4001
+      PATIENT_SERVICE_URL: http://patient-service:4000
+      PHARMACY_SERVICE_URL: http://pharmacy-service:4006
+      AI_SERVICE_URL: http://ai-service:4007
+      FRONTEND_ORIGIN: https://${PUBLIC_DEMO_DOMAIN:?Set PUBLIC_DEMO_DOMAIN in .env}
+
+  frontend:
+    profiles: [public-demo]
+    build:
+      context: ./frontend
+    expose:
+      - "80"
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: [public-demo]
+    environment:
+      PUBLIC_DEMO_DOMAIN: ${PUBLIC_DEMO_DOMAIN:?Set PUBLIC_DEMO_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

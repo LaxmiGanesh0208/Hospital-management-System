@@ -1,0 +1,62 @@
+# Compiled files and logs
+*.class
+*.log
+logs/
+*.out
+
+# IDEs
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+*.iws
+
+# Java build output
+**/target/
+bin/
+out/
+.gradle/
+build/
+.gradle-cache/
+
+# Maven generated metadata
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+# Node dependencies and generated frontend output
+**/node_modules/
+**/dist/
+frontend/.vite/
+frontend/.vite-cache/
+
+# Local configuration and credentials
+.env
+**/.env
+*.key
+*.pem
+*.p12
+*.crt
+*.cert
+*.jks
+*.keystore
+.aws/
+
+# Temporary files
+*.swp
+*.swo
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Local infrastructure state
+.localstack/
+/docker/
+/docker-compose.yml
+/docker-compose.override.yml
+/k8s/

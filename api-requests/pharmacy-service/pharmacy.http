@@ -1,0 +1,32 @@
+### Get all medications from Pharmacy Department
+GET http://localhost:4006/pharmacy/medications
+Content-Type: application/json
+
+### Add a new medication to Pharmacy Department inventory
+POST http://localhost:4006/pharmacy/medications
+Content-Type: application/json
+
+{
+  "name": "Azithromycin 250mg",
+  "code": "MED-005",
+  "stockQuantity": 120,
+  "reorderThreshold": 15,
+  "price": 24.50
+}
+
+### Create a new prescription in Pharmacy Department
+POST http://localhost:4006/pharmacy/prescriptions
+Content-Type: application/json
+
+{
+  "patientId": "223e4567-e89b-12d3-a456-426614174006",
+  "medicationId": "11111111-1111-1111-1111-111111111111",
+  "quantity": 2,
+  "dosage": "1 pill twice daily for 5 days"
+}
+
+### Dispense medication for prescription
+PUT http://localhost:4006/pharmacy/prescriptions/11111111-1111-1111-1111-111111111111/dispense
+
+### Get prescriptions for a specific patient
+GET http://localhost:4006/pharmacy/prescriptions/patient/223e4567-e89b-12d3-a456-426614174006

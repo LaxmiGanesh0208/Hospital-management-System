@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package pharmacy.events;
+option java_multiple_files = true;
+
+message PrescriptionEvent {
+  string prescriptionId = 1;
+  string patientId = 2;
+  string medicationId = 3;
+  string medicationName = 4;
+  int32 quantity = 5;
+  string status = 6;
+  int64 timestamp = 7;
+}
+
+message MedicationInventoryEvent {
+  string medicationId = 1;
+  string medicationName = 2;
+  int32 previousStock = 3;
+  int32 currentStock = 4;
+  int32 reorderThreshold = 5;
+  string changeType = 6;
+  int64 timestamp = 7;
+}

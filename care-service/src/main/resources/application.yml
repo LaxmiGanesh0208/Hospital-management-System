@@ -1,0 +1,23 @@
+server:
+  port: 4008
+spring:
+  application:
+    name: care-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:caredb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update}
+    open-in-view: false
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+billing:
+  service:
+    url: ${BILLING_SERVICE_URL:http://billing-service:4001}
+  internal-service-token: ${BILLING_INTERNAL_SERVICE_TOKEN:}

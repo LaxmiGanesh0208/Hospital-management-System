@@ -1,0 +1,136 @@
+server:
+  port: 4004 # Gateway listens on port 4004
+
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://auth-service:4005}
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        add-to-simple-url-handler-mapping: true
+        cors-configurations:
+          '[/**]':
+            allowed-origins: ${FRONTEND_ORIGIN:http://localhost:5173}
+            allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
+            allowed-headers: Authorization,Content-Type
+            allow-credentials: true
+            max-age: 3600
+      routes:
+        - id: care-public-catalog-route
+          uri: http://care-service:4008
+          predicates:
+            - Path=/api/care/doctors/**,/api/care/lab-tests/**
+            - Method=GET
+          filters:
+            - StripPrefix=1
+
+        - id: care-service-route
+          uri: http://care-service:4008
+          predicates:
+            - Path=/api/care/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+
+        - id: billing-service-route
+          uri: http://billing-service:4001
+          predicates:
+            - Path=/api/billing/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+
+        - id: api-docs-care-route
+          uri: http://care-service:4008
+          predicates:
+            - Path=/api-docs/care
+          filters:
+            - RewritePath=/api-docs/care,/v3/api-docs
+
+        - id: api-docs-billing-route
+          uri: http://billing-service:4001
+          predicates:
+            - Path=/api-docs/billing
+          filters:
+            - RewritePath=/api-docs/billing,/v3/api-docs
+
+        - id: auth-service-route
+          uri: http://auth-service:4005
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+
+        - id: auth-admin-staff-route
+          uri: http://auth-service:4005
+          predicates:
+            - Path=/api/admin/staff,/api/admin/staff/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+
+        # Route for /api/patients/** to patient-service
+        - id: patient-service-route
+          uri: http://patient-service:4000
+          predicates:
+            - Path=/api/patients/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+
+        # Route for /api/docs/patients to patient-service /v3/api-docs
+        - id: api-docs-patient-route
+          uri: http://patient-service:4000
+          predicates:
+            - Path=/api-docs/patients
+          filters:
+            - RewritePath=/api-docs/patients,/v3/api-docs
+
+        - id: api-docs-auth-route
+          uri: http://auth-service:4005
+          predicates:
+            - Path=/api-docs/auth
+          filters:
+            - RewritePath=/api-docs/auth,/v3/api-docs
+
+        - id: pharmacy-public-catalog-route
+          uri: http://pharmacy-service:4006
+          predicates:
+            - Path=/api/pharmacy/medications
+            - Method=GET
+          filters:
+            - StripPrefix=1
+
+        # Authenticated pharmacy operations (orders and prescriptions)
+        - id: pharmacy-service-route
+          uri: http://pharmacy-service:4006
+          predicates:
+            - Path=/api/pharmacy/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+
+        # Route for /api/ai/** to ai-service (Port 4007)
+        - id: ai-service-route
+          uri: http://ai-service:4007
+          predicates:
+            - Path=/api/ai/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+
+        - id: api-docs-pharmacy-route
+          uri: http://pharmacy-service:4006
+          predicates:
+            - Path=/api-docs/pharmacy
+          filters:
+            - RewritePath=/api-docs/pharmacy,/v3/api-docs
+
+        - id: api-docs-ai-route
+          uri: http://ai-service:4007
+          predicates:
+            - Path=/api-docs/ai
+          filters:
+            - RewritePath=/api-docs/ai,/v3/api-docs

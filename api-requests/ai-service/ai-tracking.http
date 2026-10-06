@@ -1,0 +1,11 @@
+### Get cross-departmental AI dashboard metrics
+GET http://localhost:4007/ai/dashboard
+Content-Type: application/json
+
+### Get all AI-generated safety insights and cross-departmental alerts
+GET http://localhost:4007/ai/insights
+Content-Type: application/json
+
+### Get AI-tracked patient risk profiles (Monitoring Patient & Pharmacy activity)
+GET http://localhost:4007/ai/patient-profiles
+Content-Type: application/json
